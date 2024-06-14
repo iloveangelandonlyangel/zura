@@ -1,0 +1,290 @@
+hojixv = {
+    Silent = {
+        ["Enabled"] = true,
+        ["Prediction"] = 0.129,
+        ["Part"] = "HumanoidRootPart",
+        
+        ["UseAirShotPart"] = false,
+        ["AirShotPart"] = "Head",
+        
+        ["UseToggleKey"] = false, -- Use A Key To Enabled / Disabled The Silent
+        ["ToggleKey"] = "p",-- The Key To Enabled / Disabled The Silent
+        
+        Circle = {
+            ["Visible"] = true,
+            ["Filled"] = false,
+            ["Radius"] = 50,
+            ["Transparency"] = 0.4,
+            ["Color"] = Color3.fromRGB(255,255,255),
+        }
+    },
+    Camlock = {
+        ["Enabled"] = true,
+        ["Keybind"] = "c",
+        ["Prediction"] = 0.138,
+        ["Part"] = "HumanoidRootPart",
+        
+        ["UseSmoothing"] = true,
+        ["SmoothingAmount"] = 1,
+        ["EasingStyle"] = Enum.EasingStyle.Elastic,
+        ["EasingDirection"] = Enum.EasingDirection.InOut,
+        
+        Circle = {
+            ["Visible"] = false,
+            ["Filled"] = false,
+            ["Radius"] = 25,
+            ["Transparency"] = 0.4,
+            ["Thickness"] = 1,
+            ["Color"] = Color3.fromRGB(255,255,255),
+        },
+    },
+    Both = {
+        ["Notifications"] = true,
+        ["Duration"] = 1,
+
+        ["UnlockOnTargetDeath"] = true,
+        ["UnlockOnOwnDeath"] = true,
+
+        ["FriendCheck"] = false, 
+        ["KoCheck"] = false,
+        ["GrabbedCheck"] = false,
+        ["CrewCheck"] = false,
+    }
+}
+
+function Notify(Text)
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Silent.hojixv",
+        Text = Text,
+        Duration = hojixv.Both.Duration,
+    })
+end
+
+local Mouse = game:GetService("Players").LocalPlayer:GetMouse()
+local Camera = game:GetService("Workspace").CurrentCamera
+
+local CircleDrawing = Drawing.new("Circle")
+local DrawingCircle2 = Drawing.new("Circle")
+
+CircleDrawing.Color = hojixv.Silent.Circle.Color
+CircleDrawing.Thickness = 1
+CircleDrawing.NumSides = 9e9
+CircleDrawing.Radius = hojixv.Silent.Circle.Radius*3
+CircleDrawing.Transparency = hojixv.Silent.Circle.Transparency
+CircleDrawing.Visible = hojixv.Silent.Circle.Visible
+CircleDrawing.Filled = hojixv.Silent.Circle.Filled
+
+DrawingCircle2.Color = hojixv.Camlock.Circle.Color
+DrawingCircle2.Thickness = hojixv.Camlock.Circle.Thickness
+DrawingCircle2.NumSides = 9e9
+DrawingCircle2.Radius = hojixv.Camlock.Circle.Radius*3
+DrawingCircle2.Transparency = hojixv.Camlock.Circle.Transparency
+DrawingCircle2.Visible = hojixv.Camlock.Circle.Visible
+DrawingCircle2.Filled = hojixv.Camlock.Circle.Filled
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    CircleDrawing.Position = Vector2.new(Mouse.X,Mouse.Y+35)
+    DrawingCircle2.Position = Vector2.new(Mouse.X , Mouse.Y + 35)
+end)
+
+game.Players.LocalPlayer:GetMouse().KeyDown:Connect(function(Keybind)
+    if hojixv.Silent.UseToggleKey then
+    if Keybind == hojixv.Silent.ToggleKey then
+        if hojixv.Silent.Enabled == false then
+            hojixv.Silent.Enabled = true
+            if hojixv.Silent.Circle.Visible == true then
+                CircleDrawing.Visible = true
+            end if hojixv.Both.Notifications then
+                    Notify("Silent  Enabled")
+                end
+            
+        elseif hojixv.Silent.Enabled == true then
+            hojixv.Silent.Enabled = false
+            if hojixv.Silent.Circle.Visible == true then
+                CircleDrawing.Visible = false
+            end if hojixv.Both.Notifications then
+                    Notify("Silent  Disabled")
+                end
+        end
+    end
+    end
+end)
+
+local function InsideSilentFov()
+	local target = nil
+	local distance = math.huge
+	local players = game:GetService("Players"):GetPlayers()
+	local localPlayer = game:GetService("Players").LocalPlayer
+	local camera = game:GetService("Workspace").CurrentCamera
+	
+	for _, player in pairs(players) do
+		if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") then
+			local castingFrom = CFrame.new(camera.CFrame.Position, player.Character[hojixv.Silent.Part].CFrame.Position) * CFrame.new(0, 0, -4)
+			local ray = Ray.new(castingFrom.Position, castingFrom.LookVector * 9000)
+			local hitPart, hitPosition = game:GetService("Workspace"):FindPartOnRayWithIgnoreList(ray, {localPlayer.Character:FindFirstChild("Head")})
+			local rootDistance = (player.Character[hojixv.Silent.Part].Position - hitPosition).magnitude
+		    
+			if rootDistance < 4 then
+				local rootPosition, visible = camera:WorldToViewportPoint(player.Character[hojixv.Silent.Part].Position)
+				if visible then
+					local realDistance = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(rootPosition.X, rootPosition.Y)).Magnitude
+					if realDistance < distance and realDistance < CircleDrawing.Radius then
+						distance = realDistance
+						target = player.Character
+					end
+				end
+			end
+
+            if hojixv.Both.FriendCheck then
+                if game.Players.LocalPlayer:IsFriendsWith(player.UserId) then
+                    distance = nil
+					target = nil
+                end
+            end
+
+            if hojixv.Both.KoCheck then
+                if player.Character.BodyEffects["K.O"].Value then
+                    distance = nil
+					target = nil
+                end
+            end
+
+            if hojixv.Both.GrabbedCheck then
+                if player.Character:FindFirstChild("GRABBING_CONSTRAINT") then
+                    distance = nil
+				    target = nil
+                end
+            end
+
+
+             if hojixv.Both.CrewCheck then
+                if player.DataFolder.Information:FindFirstChild("Crew").Value == game.Players.LocalPlayer.DataFolder.Information:FindFirstChild("Crew").Value then
+                    distance = nil
+				    target = nil
+                end
+            end
+
+		end
+	end
+	return target
+end
+
+local function GetClosestPlayer()
+    local MousePos = game:GetService("Players").LocalPlayer:GetMouse().Hit.p
+    local closestPlayer = nil
+    local closestDistance = 9e9
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game.Players.LocalPlayer then
+            local distance = (player.Character.HumanoidRootPart.Position - MousePos).Magnitude
+            if distance < closestDistance then
+                closestPlayer = player
+                closestDistance = distance
+            end
+        end
+
+        if hojixv.Both.FriendCheck then 
+            if game.Players.LocalPlayer:IsFriendsWith(player.UserId) then
+                closestPlayer = nil
+                closestDistance = nil
+            end     
+        end
+
+        if hojixv.Both.KoCheck then
+            if player.Character.BodyEffects["K.O"].Value then
+                distance = nil
+				target = nil
+            end
+        end
+
+        if hojixv.Both.GrabbedCheck then
+            if player.Character:FindFirstChild("GRABBING_CONSTRAINT") then
+                distance = nil
+				target = nil
+            end
+        end
+
+
+
+        if hojixv.Both.CrewCheck then
+            if player.DataFolder.Information:FindFirstChild("Crew").Value == game.Players.LocalPlayer.DataFolder.Information:FindFirstChild("Crew").Value then
+                distance = nil
+				target = nil
+            end
+        end
+
+    end
+    return closestPlayer, closestDistance
+end
+
+Mouse.KeyDown:Connect(function(ChosenKeyTwo)
+    if ChosenKeyTwo == hojixv.Camlock.Keybind then
+        if hojixv.Camlock.Enabled == false then
+            hojixv.Camlock.Enabled = true
+            MrChosenOne = GetClosestPlayer()
+            if hojixv.Both.Notifications then
+                Notify("Attached Onto; "..ChosenPlayer.DisplayName)
+            end
+        elseif hojixv.Camlock.Enabled == true then
+            hojixv.Camlock.Enabled = false
+            if hojixv.Both.Notifications then
+                Notify("No Longer Attached")
+            end
+        end
+    end
+end)
+
+Spawn(function()
+    while true do
+        task.wait()
+        if hojixv.Camlock.Enabled and MrChosenOne then
+            if hojixv.Camlock.UseSmoothing == true then
+                Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.p, MrChosenOne.Character[hojixv.Camlock.Part].Position + MrChosenOne.Character[hojixv.Camlock.Part].Velocity * hojixv.Camlock.Prediction) 
+                    , hojixv.Camlock.SmoothingAmount , hojixv.Camlock.EasingStyle, hojixv.Camlock.EasingDirection)
+            else
+                Camera.CFrame = CFrame.new(Camera.CFrame.p, MrChosenOne.Character[hojixv.Camlock.Part].Position + MrChosenOne.Character[hojixv.Camlock.Part].Velocity * hojixv.Camlock.Prediction)
+            end
+
+            if hojixv.Both.UnlockOnOwnDeath then
+                if game.Players.LocalPlayer.Character.BodyEffects["K.O"].Value then
+                    hojixv.Camlock.Enabled = false
+                    if hojixv.Both.Notifications then
+                        Notify("No Longer Attached")
+                    end
+                end
+            end 
+
+            if hojixv.Both.UnlockOnTargetDeath then
+                if MrChosenOne.Character.BodyEffects["K.O"].Value then
+                    hojixv.Camlock.Enabled = false
+                    if hojixv.Both.Notifications then
+                        Notify("No Longer Attached")
+                    end
+                end
+            end 
+        end	
+
+
+    end
+end)
+
+local Goldy = nil
+Goldy = hookmetamethod(game, "__index", function(Plr, Index)
+    if hojixv.Silent.Enabled and Plr == Mouse and (Index:lower() == "hit") then	
+    	local MrsChosenOne = InsideSilentFov()
+    		if MrsChosenOne and MrsChosenOne[hojixv.Silent.Part] and MrsChosenOne:FindFirstChild("Humanoid") then
+    			return (Index:lower() == "hit" and MrsChosenOne[hojixv.Silent.Part].CFrame + (MrsChosenOne[hojixv.Silent.Part].AssemblyLinearVelocity * hojixv.Silent.Prediction))
+    		end
+    		return Goldy(Plr, Index)
+    	end
+	return Goldy(Plr, Index, Goldy(Plr, Index))
+end)
+
+if hojixv.Silent.UseAirShotPart == true then
+        MrsChosenOne.Character:WaitForChild("Humanoid").StateChanged:Connect(function(RisingState,FallingState)
+            if FallingState == Enum.HumanoidStateType.Freefall then
+                hojixv.Silent.Part = hojixv.Silent.AirShotPart
+            else
+                hojixv.Silent.Part = hojixv.Silent.Part
+        end
+    end)
+end
